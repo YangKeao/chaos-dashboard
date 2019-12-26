@@ -17,7 +17,7 @@
         "iconColor": "#73BF69",
         "limit": 100,
         "name": "chaos events",
-        "rawQuery": "SELECT\n    UNIX_TIMESTAMP(start_time) as time,\n    UNIX_TIMESTAMP(end_time) as timeend,\n    name as text,\n    \"\" as tags\n  FROM events\n  WHERE $__timeFilter(end_time) AND id IN (SELECT id FROM affected_namespaces WHERE namespace='--CHAOS_NS--')\n  ORDER BY end_time DESC\n ",
+        "rawQuery": "SELECT\n    UNIX_TIMESTAMP(start_time) as time,\n    UNIX_TIMESTAMP(end_time) as timeend,\n    name as text,\n    \"\" as tags\n  FROM events\n  WHERE $__timeFilter(end_time) AND id IN (SELECT event_id FROM affected_namespaces WHERE namespace='--CHAOS_NS--')\n  ORDER BY end_time DESC\n ",
         "showIn": 0,
         "tags": [],
         "type": "tags"
