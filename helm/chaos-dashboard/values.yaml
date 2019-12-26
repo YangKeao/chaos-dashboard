@@ -10,12 +10,11 @@ clusterScoped: true
 rbac:
   create: true
 
-collector:
-  serviceAccount: chaos-collector
+dashboard:
+  serviceAccount: chaos-dashboard
 
-  image: pingcap/chaos-collector:latest
+  image: pingcap/chaos-dashboard:latest
   #  imagePullPolicy: Always
-
 
   nodeSelector: {}
 

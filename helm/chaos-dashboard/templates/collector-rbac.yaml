@@ -2,23 +2,23 @@
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: {{ .Values.collector.serviceAccount }}
+  name: {{ .Values.dashboard.serviceAccount }}
   labels:
     app.kubernetes.io/name: {{ template "chaos-dashboard.name" . }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/component: collector
+    app.kubernetes.io/component: dashboard
     helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+"  "_" }}
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: {{ .Release.Name }}:chaos-collector
+  name: {{ .Release.Name }}:chaos-dashboard
   labels:
     app.kubernetes.io/name: {{ template "chaos-dashboard.name" . }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/component: collector
+    app.kubernetes.io/component: dashboard
     helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+"  "_" }}
 rules:
   {{- if .Values.clusterScoped }}
@@ -78,32 +78,32 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: {{ .Release.Name }}:chaos-collector
+  name: {{ .Release.Name }}:chaos-dashboard
   labels:
     app.kubernetes.io/name: {{ template "chaos-dashboard.name" . }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/component: collector
+    app.kubernetes.io/component: dashboard
     helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+"  "_" }}
 subjects:
   - kind: ServiceAccount
-    name: {{ .Values.collector.serviceAccount }}
+    name: {{ .Values.dashboard.serviceAccount }}
     namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: {{ .Release.Name }}:chaos-collector
+  name: {{ .Release.Name }}:chaos-dashboard
   apiGroup: rbac.authorization.k8s.io
   {{- if (not .Values.clusterScoped) }}
 ---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: {{ .Release.Name }}:chaos-collector
+  name: {{ .Release.Name }}:chaos-dashboard
   labels:
     app.kubernetes.io/name: {{ template "chaos-dashboard.name" . }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/component: collector
+    app.kubernetes.io/component: dashboard
     helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+"  "_" }}
 rules:
   - apiGroups: [""]
@@ -137,19 +137,19 @@ rules:
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: {{ .Release.Name }}:chaos-collector
+  name: {{ .Release.Name }}:chaos-dashboard
   labels:
     app.kubernetes.io/name: {{ template "chaos-dashboard.name" . }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/component: collector
+    app.kubernetes.io/component: dashboard
     helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+"  "_" }}
 subjects:
   - kind: ServiceAccount
-    name: {{ .Values.collector.serviceAccount }}
+    name: {{ .Values.dashboard.serviceAccount }}
 roleRef:
   kind: Role
-  name: {{ .Release.Name }}:chaos-collector
+  name: {{ .Release.Name }}:chaos-dashboard
   apiGroup: rbac.authorization.k8s.io
   {{- end }}
   {{- end }}

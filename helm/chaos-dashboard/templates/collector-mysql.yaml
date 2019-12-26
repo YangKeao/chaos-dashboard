@@ -76,18 +76,18 @@ kind: PersistentVolumeClaim
 metadata:
   name: collector-mysql-pv-claim
 spec:
-  {{- if .Values.collector.volume.storageClassName }}
-  storageClassName: {{ .Values.collector.volume.storageClassName }}
+  {{- if .Values.dashboard.volume.storageClassName }}
+  storageClassName: {{ .Values.dashboard.volume.storageClassName }}
   {{- end }}
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
   resources:
     requests:
-      storage: {{ .Values.collector.volume.storage }}
-  {{- if .Values.collector.volume.selector }}
+      storage: {{ .Values.dashboard.volume.storage }}
+  {{- if .Values.dashboard.volume.selector }}
   selector:
-    {{ .Values.collector.volume.selector }}
+    {{ .Values.dashboard.volume.selector }}
   {{- end }}
 ---
 apiVersion: v1

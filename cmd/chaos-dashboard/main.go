@@ -16,6 +16,7 @@ package main
 import (
 	"flag"
 	"github.com/YangKeao/chaos-dashboard/collector"
+	"github.com/YangKeao/chaos-dashboard/server"
 	chaosoperatorv1alpha1 "github.com/pingcap/chaos-operator/api/v1alpha1"
 	"github.com/pingcap/chaos-operator/pkg/version"
 	"os"
@@ -106,6 +107,12 @@ func main() {
 	stopCh := ctrl.SetupSignalHandler()
 
 	// +kubebuilder:scaffold:builder
+
+	go func() {
+		setupLog.Info("Starting server")
+		s := server.SetupServer(mgr.GetClient())
+		s.Run()
+	}()
 
 	setupLog.Info("Starting collector")
 	if err := mgr.Start(stopCh); err != nil {

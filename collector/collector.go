@@ -17,38 +17,21 @@ import (
 	"context"
 	"fmt"
 	"github.com/YangKeao/chaos-dashboard/pkg/api_interface"
+	"github.com/YangKeao/chaos-dashboard/pkg/util"
 	"github.com/go-logr/logr"
 	"github.com/pingcap/chaos-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"os"
 	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 )
-
-var (
-	initLog            = ctrl.Log.WithName("setup")
-	dashboardNamespace string
-	dataSource         string
-)
-
-func init() {
-	var ok bool
-
-	dashboardNamespace, ok = os.LookupEnv("NAMESPACE")
-	if !ok {
-		initLog.Error(nil, "cannot find NAMESPACE")
-		dashboardNamespace = "chaos"
-	}
-
-	dataSource = fmt.Sprintf("root:@tcp(chaos-collector-database.%s:3306)/chaos_operator", dashboardNamespace)
-}
 
 type ChaosCollector struct {
 	client.Client
@@ -82,7 +65,7 @@ func (r *ChaosCollector) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 
 	for namespace := range affected_namespace {
-		err := r.EnsureTidbNamespaceHasGrafana(namespace)
+		err := r.EnsureTidbNamespaceHasGrafana(ctx, namespace)
 		if err != nil {
 			r.Log.Error(err, "check grafana for tidb cluster failed")
 		}
@@ -127,7 +110,7 @@ func (r *ChaosCollector) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 func (r *ChaosCollector) Setup(mgr ctrl.Manager, apiType runtime.Object) error {
 	r.apiType = apiType
 
-	databaseClient, err := NewDatabaseClient(dataSource)
+	databaseClient, err := NewDatabaseClient(util.DataSource)
 	if err != nil {
 		r.Log.Error(err, "create database client failed")
 		return nil
@@ -139,26 +122,26 @@ func (r *ChaosCollector) Setup(mgr ctrl.Manager, apiType runtime.Object) error {
 		Complete(r)
 }
 
-func (r *ChaosCollector) EnsureTidbNamespaceHasGrafana(namespace string) error {
+func (r *ChaosCollector) EnsureTidbNamespaceHasGrafana(ctx context.Context, namespace string) error {
 	var svcList corev1.ServiceList
 
 	var listOptions = client.ListOptions{}
 	listOptions.Namespace = namespace
-	err := r.List(context.Background(), &svcList, &listOptions)
+	err := r.List(ctx, &svcList, &listOptions)
 	if err != nil {
 		r.Log.Error(err, "error while getting all services", "namespace", namespace)
 	}
 
 	for _, service := range svcList.Items {
 		if strings.Contains(service.Name, "prometheus") {
-			ok, err := r.IsGrafanaSetUp(service.Name, service.Namespace)
+			ok, err := r.IsGrafanaSetUp(ctx, service.Name, service.Namespace)
 			if err != nil {
 				r.Log.Error(err, "error while getting grafana")
 				return err
 			}
 
 			if !ok {
-				err := r.SetupGrafana(service.Name, service.Namespace, service.Spec.Ports[0].Port) // This zero index is unsafe hack. TODO: use a better way to get port
+				err := r.SetupGrafana(ctx, service.Name, service.Namespace, service.Spec.Ports[0].Port) // This zero index is unsafe hack. TODO: use a better way to get port
 				if err != nil {
 					r.Log.Error(err, "error while creating grafana")
 					return err
@@ -172,14 +155,14 @@ func (r *ChaosCollector) EnsureTidbNamespaceHasGrafana(namespace string) error {
 	return nil
 }
 
-func (r *ChaosCollector) IsGrafanaSetUp(name string, namespace string) (bool, error) {
+func (r *ChaosCollector) IsGrafanaSetUp(ctx context.Context, name string, namespace string) (bool, error) {
 	var deploymentList v1.DeploymentList
 
 	var listOptions = client.ListOptions{}
-	listOptions.Namespace = dashboardNamespace
-	err := r.List(context.Background(), &deploymentList, &listOptions)
+	listOptions.Namespace = util.DashboardNamespace
+	err := r.List(ctx, &deploymentList, &listOptions)
 	if err != nil {
-		r.Log.Error(err, "error while getting all deployments", "namespace", dashboardNamespace)
+		r.Log.Error(err, "error while getting all deployments", "namespace", util.DashboardNamespace)
 	}
 
 	result := false
@@ -192,22 +175,23 @@ func (r *ChaosCollector) IsGrafanaSetUp(name string, namespace string) (bool, er
 	return result, nil
 }
 
-func (r *ChaosCollector) SetupGrafana(name string, namespace string, port int32) error {
+func (r *ChaosCollector) SetupGrafana(ctx context.Context, name string, namespace string, port int32) error {
 	var deployment v1.Deployment
 
-	deployment.Namespace = dashboardNamespace
+	deployment.Namespace = util.DashboardNamespace
 	deployment.Name = fmt.Sprintf("%s-%s-chaos-grafana", namespace, name)
 
 	labels := map[string]string{
-		"app.kubernetes.io/name": deployment.Name,
-		"prometheus/name":        name,
-		"prometheus/namespace":   namespace,
+		"app.kubernetes.io/name":      deployment.Name,
+		"app.kubernetes.io/component": "grafana",
+		"prometheus/name":             name,
+		"prometheus/namespace":        namespace,
 	}
 
 	var chaosDashboard v1.Deployment
-	err := r.Get(context.Background(), types.NamespacedName{
-		Namespace: dashboardNamespace,
-		Name:      "chaos-collector",
+	err := r.Get(ctx, types.NamespacedName{
+		Namespace: util.DashboardNamespace,
+		Name:      "chaos-dashboard",
 	}, &chaosDashboard)
 	if err != nil {
 		return err
@@ -222,7 +206,7 @@ func (r *ChaosCollector) SetupGrafana(name string, namespace string, port int32)
 	blockOwnerDeletion := true
 	deployment.OwnerReferences = append(deployment.OwnerReferences, metav1.OwnerReference{
 		BlockOwnerDeletion: &blockOwnerDeletion,
-		Name:               "chaos-collector",
+		Name:               "chaos-dashboard",
 		Kind:               "Deployment",
 		APIVersion:         "apps/v1beta1",
 		UID:                uid,
@@ -230,9 +214,59 @@ func (r *ChaosCollector) SetupGrafana(name string, namespace string, port int32)
 
 	var container corev1.Container
 	container.Name = "grafana"
-	container.Image = "grafana/grafana:master-ubuntu"
+	container.Image = "pingcap/chaos-grafana:latest"
+	container.ImagePullPolicy = corev1.PullIfNotPresent
+	container.Env = []corev1.EnvVar{
+		corev1.EnvVar{
+			Name:  "CHAOS_NS",
+			Value: namespace,
+		},
+		corev1.EnvVar{
+			Name:  "CHAOS_EVENT_DS_URL",
+			Value: fmt.Sprintf("chaos-collector-database.%s:3306", util.DashboardNamespace),
+		},
+		corev1.EnvVar{
+			Name:  "CHAOS_EVENT_DS_DB",
+			Value: "chaos_operator",
+		},
+		corev1.EnvVar{
+			Name:  "CHAOS_EVENT_DS_USER",
+			Value: "root",
+		},
+		corev1.EnvVar{
+			Name:  "CHAOS_METRIC_DS_URL",
+			Value: fmt.Sprintf("http://%s.%s:%d", name, namespace, port),
+		},
+	}
 	deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, container)
 
 	r.Log.Info("creating grafana deployments")
-	return r.Create(context.Background(), &deployment)
+	err = r.Create(ctx, &deployment)
+	if err != nil {
+		return err
+	}
+
+	var service corev1.Service
+	service.Name = fmt.Sprintf("%s-chaos-grafana", namespace)
+	service.Namespace = util.DashboardNamespace
+	service.Labels = labels
+	service.OwnerReferences = append(service.OwnerReferences, metav1.OwnerReference{
+		BlockOwnerDeletion: &blockOwnerDeletion,
+		Name:               "chaos-dashboard",
+		Kind:               "Deployment",
+		APIVersion:         "apps/v1beta1",
+		UID:                uid,
+	})
+	service.Spec.Selector = labels
+	service.Spec.Ports = []corev1.ServicePort{
+		corev1.ServicePort{
+			Protocol: corev1.ProtocolTCP,
+			Port:     3000,
+			TargetPort: intstr.IntOrString{
+				IntVal: 3000,
+			},
+		},
+	}
+	r.Log.Info("creating grafana service")
+	return r.Create(ctx, &service)
 }

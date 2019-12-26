@@ -6,7 +6,7 @@ GOENV  := GO15VENDOREXPERIMENT="1" CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH)
 GO     := $(GOENV) go
 GOTEST := TEST_USE_EXISTING_CLUSTER=false go test
 
-all: collector
+all: dashboard images
 
 # Run go fmt against code
 fmt:
@@ -16,7 +16,14 @@ fmt:
 vet:
 	$(GO) vet ./...
 
-collector: fmt vet
-	$(GO) build -ldflags '$(LDFLAGS)' -o images/chaos-collector/bin/chaos-collector ./cmd/chaos-collector/*.go
+dashboard: fmt vet
+	$(GO) build -ldflags '$(LDFLAGS)' -o images/chaos-dashboard/bin/chaos-dashboard ./cmd/chaos-dashboard/*.go
 
-.PHONY: collector
+dashboard-server-frontend:
+	cd images/chaos-dashboard; yarn build
+
+images: dashboard dashboard-server-frontend
+	docker build -t pingcap/chaos-grafana images/grafana
+	docker build -t pingcap/chaos-dashboard images/chaos-dashboard
+
+.PHONY: images
