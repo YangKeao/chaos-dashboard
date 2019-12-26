@@ -16,10 +16,10 @@ package collector
 import (
 	"context"
 	"fmt"
-	"github.com/YangKeao/chaos-dashboard/pkg/api_interface"
 	"github.com/YangKeao/chaos-dashboard/pkg/util"
 	"github.com/go-logr/logr"
-	"github.com/pingcap/chaos-operator/api/v1alpha1"
+	"github.com/pingcap/chaos-mesh/api/v1alpha1"
+	"github.com/pingcap/chaos-mesh/pkg/api_interface"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"

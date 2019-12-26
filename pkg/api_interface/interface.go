@@ -14,7 +14,7 @@
 package api_interface
 
 import (
-	"github.com/pingcap/chaos-operator/api/v1alpha1"
+	"github.com/pingcap/chaos-mesh/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 

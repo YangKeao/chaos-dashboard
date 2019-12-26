@@ -17,8 +17,8 @@ import (
 	"flag"
 	"github.com/YangKeao/chaos-dashboard/collector"
 	"github.com/YangKeao/chaos-dashboard/server"
-	chaosoperatorv1alpha1 "github.com/pingcap/chaos-operator/api/v1alpha1"
-	"github.com/pingcap/chaos-operator/pkg/version"
+	chaosoperatorv1alpha1 "github.com/pingcap/chaos-mesh/api/v1alpha1"
+	"github.com/pingcap/chaos-mesh/pkg/version"
 	"os"
 
 	"k8s.io/apimachinery/pkg/runtime"
