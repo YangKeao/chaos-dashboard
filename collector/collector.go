@@ -179,7 +179,7 @@ func (r *ChaosCollector) SetupGrafana(ctx context.Context, name string, namespac
 	var deployment v1.Deployment
 
 	deployment.Namespace = util.DashboardNamespace
-	deployment.Name = fmt.Sprintf("%s-%s-chaos-grafana", namespace, name)
+	deployment.Name = fmt.Sprintf("%s-chaos-grafana", namespace)
 
 	labels := map[string]string{
 		"app.kubernetes.io/name":      deployment.Name,
